@@ -2,7 +2,7 @@
 
 [![Run Tests](https://github.com/Desbravando-Rust/rsfn4py/actions/workflows/test.yml/badge.svg)](https://github.com/Desbravando-Rust/rsfn4py/actions/workflows/test.yml)
 ![Release](https://github.com/Desbravando-Rust/rsfn4py/actions/workflows/release.yml/badge.svg)
-![Python Versions](https://img.shields.io/pypi/pyversions/rsfn4py)
+![Python Versions](https://img.shields.io/pypi/pyversions/rsfn4py.svg?cacheSeconds=60)
 
 Uma coleção de módulos de alta performance escritos em **Rust** para serem consumidos nativamente em projetos **Python**, focando em processamento rápido e baixo consumo de memória.
 
