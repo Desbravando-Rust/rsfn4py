@@ -1,0 +1,93 @@
+name: Release to PyPI
+
+# A action vai rodar apenas quando você fizer o push de uma Tag do tipo v1.0.0
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  # 1. Compilação para Linux (arquitetura x86_64 e ARM via manylinux)
+  linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [x86_64, aarch64]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          args: --release --out dist -i python3.8 python3.9 python3.10 python3.11 python3.12
+          manylinux: auto
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-linux-${{ matrix.target }}
+          path: dist
+
+  # 2. Compilação para Windows
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          args: --release --out dist -i python3.8 python3.9 python3.10 python3.11 python3.12
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-windows
+          path: dist
+
+  # 3. Compilação para macOS (Universal para rodar em Intel e Apple Silicon M1/M2)
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: universal2-apple-darwin
+          args: --release --out dist -i python3.8 python3.9 python3.10 python3.11 python3.12
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-macos
+          path: dist
+
+  # 4. Geração do Source Distribution (sdist)
+  sdist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build sdist
+        uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist
+      - name: Upload sdist
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-sdist
+          path: dist
+
+  # 5. Download dos artefatos e publicação no PyPI
+  release:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: [linux, windows, macos, sdist]
+    # Usaremos o mecanismo de "Trusted Publishers" via OIDC no PyPI (não requer token hardcoded)
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          # O merge-multiple: true garante que sdist e wheels caiam na mesma pasta 'dist/'
+          merge-multiple: true
+          path: dist
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

@@ -1,0 +1,14 @@
+[package]
+name = "rsfn4py"
+version = "0.1.0"
+edition = "2021"
+authors = ["Jose Luis da Cruz Junior"]
+description = "High-performance Rust modules for Python applications."
+
+[lib]
+name = "rsfn4py"
+# "cdylib" é necessário para produzir a biblioteca compartilhada que o Python irá importar.
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.29.0", features = ["extension-module"] }

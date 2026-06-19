@@ -1,0 +1,22 @@
+[build-system]
+requires = ["maturin>=1.4,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "rsfn4py"
+description = "High-performance Rust modules for Python applications."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
+# Permite ao Maturin pegar as informações abaixo do Cargo.toml para não repetir
+dynamic = ["version", "authors"]
+
+[tool.maturin]
+# Dizemos ao Maturin onde estão os arquivos Python puro caso deseje misturar o código
+python-source = "python"
+# Especifica como os binários devem ser empacotados para subir no repositório PyPI
+features = ["pyo3/extension-module"]
