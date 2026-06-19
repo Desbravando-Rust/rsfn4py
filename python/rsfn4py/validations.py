@@ -25,3 +25,27 @@ def validate_cnpj_python(cnpj: str) -> bool:
     dv2 = 0 if mod2 < 2 else 11 - mod2
     
     return get_ascii_val(cnpj[13]) == dv2
+
+
+def validate_cpf_python(cpf: str) -> bool:
+    """Valida CPF (apenas numérico, com ou sem formatação) em Python puro."""
+    cpf = re.sub(r'\D', '', cpf)
+    if len(cpf) != 11:
+        return False
+
+    if len(set(cpf)) == 1:
+        return False
+
+    digits = [int(d) for d in cpf]
+
+    sum1 = sum(digits[i] * (10 - i) for i in range(9))
+    mod1 = sum1 % 11
+    dv1 = 0 if mod1 < 2 else 11 - mod1
+    if digits[9] != dv1:
+        return False
+
+    sum2 = sum(digits[i] * (11 - i) for i in range(10))
+    mod2 = sum2 % 11
+    dv2 = 0 if mod2 < 2 else 11 - mod2
+
+    return digits[10] == dv2

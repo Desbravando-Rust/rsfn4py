@@ -43,15 +43,52 @@ fn validate_cnpj_rust(cnpj: &str) -> bool {
     get_val(cleaned[13]) == dv2
 }
 
+#[pyfunction]
+fn validate_cpf_rust(cpf: &str) -> bool {
+    let cleaned: Vec<char> = cpf.chars().filter(|c| c.is_ascii_digit()).collect();
+
+    if cleaned.len() != 11 {
+        return false;
+    }
+
+    // Rejeita CPF com todos os caracteres iguais
+    if cleaned.iter().all(|&c| c == cleaned[0]) {
+        return false;
+    }
+
+    let get_val = |c: char| -> i32 { c as i32 - 48 };
+
+    let mut sum1 = 0;
+    for i in 0..9 {
+        sum1 += get_val(cleaned[i]) * (10 - i as i32);
+    }
+    let mod1 = sum1 % 11;
+    let dv1 = if mod1 < 2 { 0 } else { 11 - mod1 };
+
+    if get_val(cleaned[9]) != dv1 {
+        return false;
+    }
+
+    let mut sum2 = 0;
+    for i in 0..10 {
+        sum2 += get_val(cleaned[i]) * (11 - i as i32);
+    }
+    let mod2 = sum2 % 11;
+    let dv2 = if mod2 < 2 { 0 } else { 11 - mod2 };
+
+    get_val(cleaned[10]) == dv2
+}
+
 #[pymodule]
 fn rsfn4py(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(validate_cnpj_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(validate_cpf_rust, m)?)?;
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
-    use super::validate_cnpj_rust;
+    use super::{validate_cnpj_rust, validate_cpf_rust};
 
     #[test]
     fn should_accept_valid_numeric_cnpj_with_formatting() {
@@ -111,5 +148,45 @@ mod tests {
     #[test]
     fn should_reject_empty_input() {
         assert!(!validate_cnpj_rust(""));
+    }
+
+    #[test]
+    fn should_accept_valid_cpf_with_formatting() {
+        assert!(validate_cpf_rust("529.982.247-25"));
+    }
+
+    #[test]
+    fn should_accept_valid_cpf_without_formatting() {
+        assert!(validate_cpf_rust("52998224725"));
+    }
+
+    #[test]
+    fn should_accept_valid_cpf_with_extra_non_digit_chars() {
+        assert!(validate_cpf_rust("..529.982.247-25--"));
+    }
+
+    #[test]
+    fn should_reject_cpf_with_invalid_check_digits() {
+        assert!(!validate_cpf_rust("529.982.247-24"));
+    }
+
+    #[test]
+    fn should_reject_repeated_digits_in_cpf() {
+        assert!(!validate_cpf_rust("111.111.111-11"));
+    }
+
+    #[test]
+    fn should_reject_nonsense_cpf_input() {
+        assert!(!validate_cpf_rust("NONSENSE"));
+    }
+
+    #[test]
+    fn should_reject_when_cleaned_cpf_length_is_not_11() {
+        assert!(!validate_cpf_rust("529.982.247-2500"));
+    }
+
+    #[test]
+    fn should_reject_empty_cpf_input() {
+        assert!(!validate_cpf_rust(""));
     }
 }
