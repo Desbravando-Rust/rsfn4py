@@ -1,0 +1,162 @@
+name: Create Tag and GitHub Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_ref:
+        description: "Branch ou commit para criar a tag (default: branch atual)"
+        required: false
+        default: ""
+      prerelease:
+        description: "Marcar a GitHub Release como pre-release"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  create-tag-and-release:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TOKEN: ${{ secrets.RELEASE_WORKFLOW_TOKEN }}
+    steps:
+      - name: Validate required secret
+        run: |
+          if [ -z "${RELEASE_TOKEN}" ]; then
+            echo "Missing secret RELEASE_WORKFLOW_TOKEN"
+            echo "Configure a PAT with 'contents:write' e 'workflows' scopes para disparar workflows por push de tag."
+            exit 1
+          fi
+
+      - name: Checkout target ref
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.RELEASE_WORKFLOW_TOKEN }}
+          fetch-depth: 0
+          ref: ${{ inputs.target_ref != '' && inputs.target_ref || github.ref }}
+
+      - name: Read version from Cargo.toml and validate semver
+        id: version
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          import subprocess
+          import tomllib
+          from pathlib import Path
+
+          cargo = Path("Cargo.toml")
+          data = tomllib.loads(cargo.read_text(encoding="utf-8"))
+          version = data.get("package", {}).get("version", "")
+
+          semver = re.compile(
+              r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)"
+              r"(?:-((?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)"
+              r"(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*))?"
+              r"(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$"
+          )
+
+          def parse_semver(value: str):
+              m = semver.match(value)
+              if not m:
+                  return None
+              major, minor, patch = (int(m.group(1)), int(m.group(2)), int(m.group(3)))
+              prerelease = m.group(4)
+              pre_parts = prerelease.split(".") if prerelease else []
+              return (major, minor, patch, pre_parts)
+
+          def cmp_identifier(left: str, right: str) -> int:
+              left_is_num = left.isdigit()
+              right_is_num = right.isdigit()
+              if left_is_num and right_is_num:
+                  return (int(left) > int(right)) - (int(left) < int(right))
+              if left_is_num and not right_is_num:
+                  return -1
+              if not left_is_num and right_is_num:
+                  return 1
+              return (left > right) - (left < right)
+
+          def compare_versions(left, right) -> int:
+              for i in range(3):
+                  if left[i] != right[i]:
+                      return (left[i] > right[i]) - (left[i] < right[i])
+
+              left_pre = left[3]
+              right_pre = right[3]
+
+              if not left_pre and not right_pre:
+                  return 0
+              if not left_pre:
+                  return 1
+              if not right_pre:
+                  return -1
+
+              for l_id, r_id in zip(left_pre, right_pre):
+                  cmp_result = cmp_identifier(l_id, r_id)
+                  if cmp_result != 0:
+                      return cmp_result
+
+              return (len(left_pre) > len(right_pre)) - (len(left_pre) < len(right_pre))
+
+          parsed_current = parse_semver(version)
+          if not version or parsed_current is None:
+              raise SystemExit(f"Invalid semver in Cargo.toml: {version!r}")
+
+          tags_raw = subprocess.check_output(["git", "tag", "-l", "v*"], text=True)
+          tags = [t.strip() for t in tags_raw.splitlines() if t.strip()]
+
+          latest_tag = None
+          latest_parsed = None
+          for tag_name in tags:
+              if not tag_name.startswith("v"):
+                  continue
+              parsed_tag = parse_semver(tag_name[1:])
+              if parsed_tag is None:
+                  continue
+              if latest_parsed is None or compare_versions(parsed_tag, latest_parsed) > 0:
+                  latest_parsed = parsed_tag
+                  latest_tag = tag_name
+
+          if latest_parsed is not None and compare_versions(parsed_current, latest_parsed) <= 0:
+              raise SystemExit(
+                  f"Cargo.toml version {version} must be greater than latest semver tag {latest_tag}"
+              )
+
+          tag = f"v{version}"
+          output = Path(os.environ["GITHUB_OUTPUT"])
+          with output.open("a", encoding="utf-8") as f:
+              f.write(f"version={version}\n")
+              f.write(f"tag={tag}\n")
+              f.write(f"latest_tag={latest_tag or ''}\n")
+          PY
+
+      - name: Ensure tag does not exist remotely
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "Tag ${TAG} already exists on origin."
+            exit 1
+          fi
+
+      - name: Create and push tag
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          VERSION="${{ steps.version.outputs.version }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git tag -a "${TAG}" -m "Release ${VERSION}"
+          git push origin "${TAG}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.RELEASE_WORKFLOW_TOKEN }}
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          generate_release_notes: true
+          prerelease: ${{ inputs.prerelease }}
