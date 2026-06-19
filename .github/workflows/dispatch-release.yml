@@ -19,21 +19,26 @@ permissions:
 jobs:
   create-tag-and-release:
     runs-on: ubuntu-latest
-    env:
-      RELEASE_TOKEN: ${{ secrets.RELEASE_WORKFLOW_TOKEN }}
     steps:
-      - name: Validate required secret
+      - name: Resolve token and warn if PAT is absent
+        id: token
         run: |
-          if [ -z "${RELEASE_TOKEN}" ]; then
-            echo "Missing secret RELEASE_WORKFLOW_TOKEN"
-            echo "Configure a PAT with 'contents:write' e 'workflows' scopes para disparar workflows por push de tag."
-            exit 1
+          if [ -n "${{ secrets.RELEASE_WORKFLOW_TOKEN }}" ]; then
+            echo "token=${{ secrets.RELEASE_WORKFLOW_TOKEN }}" >> "$GITHUB_OUTPUT"
+            echo "using_pat=true" >> "$GITHUB_OUTPUT"
+            echo "✅ Usando RELEASE_WORKFLOW_TOKEN — release.yml será disparado pelo push da tag."
+          else
+            echo "token=${{ secrets.GITHUB_TOKEN }}" >> "$GITHUB_OUTPUT"
+            echo "using_pat=false" >> "$GITHUB_OUTPUT"
+            echo "⚠️  RELEASE_WORKFLOW_TOKEN não configurado. Usando GITHUB_TOKEN como fallback."
+            echo "⚠️  Tags criadas com GITHUB_TOKEN NÃO disparam outros workflows (limitação do GitHub)."
+            echo "⚠️  Configure o secret RELEASE_WORKFLOW_TOKEN com um PAT (scopes: contents:write + workflow) para ativar o release.yml automaticamente."
           fi
 
       - name: Checkout target ref
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.RELEASE_WORKFLOW_TOKEN }}
+          token: ${{ steps.token.outputs.token }}
           fetch-depth: 0
           ref: ${{ inputs.target_ref != '' && inputs.target_ref || github.ref }}
 
@@ -150,12 +155,12 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           git tag -a "${TAG}" -m "Release ${VERSION}"
-          git push origin "${TAG}"
+          git -c "http.extraHeader=Authorization: Bearer ${{ steps.token.outputs.token }}" push origin "${TAG}"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          token: ${{ secrets.RELEASE_WORKFLOW_TOKEN }}
+          token: ${{ steps.token.outputs.token }}
           tag_name: ${{ steps.version.outputs.tag }}
           name: ${{ steps.version.outputs.tag }}
           generate_release_notes: true
