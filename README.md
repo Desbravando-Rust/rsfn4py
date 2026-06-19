@@ -36,7 +36,7 @@ pip install rsfn4py
 O uso é idêntico a qualquer outra biblioteca Python. A função de validação automaticamente limpa a string (removendo pontos, barras e traços) e faz a validação matemática.
 
 ```python
-from rust_services_for_python import validate_cnpj_rust, validate_cnpj_python
+from rsfn4py import validate_cnpj_rust, validate_cnpj_python
 
 cnpj_valido = "12.345.678/0001-95"
 novo_cnpj_alfanumerico = "12ABC34501DE35"
