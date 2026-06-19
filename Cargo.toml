@@ -1,6 +1,6 @@
 [package]
 name = "rsfn4py"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 authors = ["Jose Luis da Cruz Junior"]
 description = "High-performance Rust modules for Python applications."
