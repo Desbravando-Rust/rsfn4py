@@ -1,4 +1,7 @@
-.PHONY: tag
+.PHONY: tag bench bench-cpf-cnpj
+
+PYTHON ?= $(shell if [ -x .venv/bin/python ]; then echo .venv/bin/python; else echo python3; fi)
+TOTAL_VALIDACOES ?= 100000
 
 tag:
 	@VERSION="$$(grep -m1 -E '^[[:space:]]*version[[:space:]]*=' Cargo.toml | sed -E 's/^[[:space:]]*version[[:space:]]*=[[:space:]]*"([^"]+)"[[:space:]]*$$/v\1/')"; \
@@ -18,3 +21,9 @@ tag:
 	git tag "$$VERSION"; \
 	git push origin "$$VERSION"; \
 	echo "Tag $$VERSION criada e enviada para o GitHub."
+
+bench:
+	@echo "Executando benchmarks de validacao CPF/CNPJ (Rust vs Python)..."
+	@$(PYTHON) scripts/benchmark.py --total-validacoes $(TOTAL_VALIDACOES)
+
+bench-cpf-cnpj: bench
