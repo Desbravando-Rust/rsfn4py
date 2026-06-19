@@ -21,7 +21,7 @@ python-source = "python"
 # Especifica como os binários devem ser empacotados para subir no repositório PyPI
 features = ["pyo3/extension-module"]
 
-[dependency-groups]
+[project.optional-dependencies]
 dev = [
     "pytest>=8.3.5",
 ]
