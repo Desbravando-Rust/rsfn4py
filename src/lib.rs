@@ -48,3 +48,68 @@ fn rsfn4py(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(validate_cnpj_rust, m)?)?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::validate_cnpj_rust;
+
+    #[test]
+    fn should_accept_valid_numeric_cnpj_with_formatting() {
+        assert!(validate_cnpj_rust("12.345.678/0001-95"));
+    }
+
+    #[test]
+    fn should_accept_valid_numeric_cnpj_without_formatting() {
+        assert!(validate_cnpj_rust("12345678000195"));
+    }
+
+    #[test]
+    fn should_accept_valid_alphanumeric_cnpj() {
+        assert!(validate_cnpj_rust("12ABC34501DE35"));
+    }
+
+    #[test]
+    fn should_accept_lowercase_alphanumeric_cnpj() {
+        assert!(validate_cnpj_rust("12abc34501de35"));
+    }
+
+    #[test]
+    fn should_accept_valid_cnpj_with_extra_non_alphanumeric_chars() {
+        assert!(validate_cnpj_rust("..12.345.678/0001-95--"));
+    }
+
+    #[test]
+    fn should_reject_cnpj_with_invalid_check_digits() {
+        assert!(!validate_cnpj_rust("12.345.678/0001-00"));
+    }
+
+    #[test]
+    fn should_reject_repeated_characters() {
+        assert!(!validate_cnpj_rust("11111111111111"));
+    }
+
+    #[test]
+    fn should_reject_repeated_alphabetic_characters() {
+        assert!(!validate_cnpj_rust("AAAAAAAAAAAAAA"));
+    }
+
+    #[test]
+    fn should_reject_invalid_characters_in_check_digit() {
+        assert!(!validate_cnpj_rust("12.ABC.678/000X-95"));
+    }
+
+    #[test]
+    fn should_reject_nonsense_input() {
+        assert!(!validate_cnpj_rust("NONSENSE"));
+    }
+
+    #[test]
+    fn should_reject_when_cleaned_length_is_not_14() {
+        assert!(!validate_cnpj_rust("12.345.678/0001-9500"));
+    }
+
+    #[test]
+    fn should_reject_empty_input() {
+        assert!(!validate_cnpj_rust(""));
+    }
+}

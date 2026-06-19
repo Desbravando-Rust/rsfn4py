@@ -1,8 +1,8 @@
 # 🦀🐍 Rust Functions for Python (rsfn4py)
 
-![CI/CD Tests](https://github.com/seu-usuario/rust-services-for-python/actions/workflows/test.yml/badge.svg)
-![Release](https://github.com/seu-usuario/rust-services-for-python/actions/workflows/release.yml/badge.svg)
-![Python Versions](https://img.shields.io/pypi/pyversions/rust-services-for-python)
+[![Run Tests](https://github.com/Desbravando-Rust/rsfn4py/actions/workflows/test.yml/badge.svg)](https://github.com/Desbravando-Rust/rsfn4py/actions/workflows/test.yml)
+![Release](https://github.com/Desbravando-Rust/rsfn4py/actions/workflows/release.yml/badge.svg)
+![Python Versions](https://img.shields.io/pypi/pyversions/rsfn4py)
 
 Uma coleção de módulos de alta performance escritos em **Rust** para serem consumidos nativamente em projetos **Python**, focando em processamento rápido e baixo consumo de memória.
 
@@ -77,7 +77,7 @@ Se você deseja clonar o repositório para contribuir ou adicionar novos serviç
 Clone o repositório e crie um ambiente virtual (venv):
 
 ```bash
-git clone https://github.com/seu-usuario/rust-services-for-python.git
+git clone https://github.com/Desbravando-Rust/rsfn4py.git
 cd rust-services-for-python
 
 python -m venv .venv

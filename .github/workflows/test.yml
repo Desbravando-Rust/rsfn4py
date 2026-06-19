@@ -27,6 +27,16 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Run Rust unit tests (debug)
+        shell: bash
+        run: |
+          cargo test --verbose
+
+      - name: Run Rust unit tests (release)
+        shell: bash
+        run: |
+          cargo test --release --verbose
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
@@ -69,4 +79,4 @@ jobs:
             source .venv/bin/activate
           fi
           # Roda os testes na pasta "tests"
-          pytest -v tests/
+          pytest -v -x tests/
